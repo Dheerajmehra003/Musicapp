@@ -14,40 +14,48 @@ class MainWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        // If nested navigator can pop, go back
-        if (_navigatorKey.currentState != null &&
-            _navigatorKey.currentState!.canPop()) {
-          _navigatorKey.currentState!.pop();
-          return false;
-        }
-        // Otherwise, exit app from home
-        return true;
+    return BlocBuilder<PlayerBloc, PlayerState>(
+      builder: (context, state) {
+        return WillPopScope(
+          onWillPop: () async {
+            // 1. Agar panel open hai -> collapse karo
+            if (state.panelController != null &&
+                state.panelController!.isPanelOpen) {
+              state.panelController!.close();
+              return false;
+            }
+
+            // 2. Agar nested navigator back jaa sakta hai -> pop karo
+            if (_navigatorKey.currentState!.canPop()) {
+              _navigatorKey.currentState!.pop();
+              return false;
+            }
+
+            // 3. Agar home par ho aur panel collapsed hai -> exit app
+            return true;
+          },
+          child: Scaffold(
+            body: Stack(
+              children: [
+                Navigator(
+                  key: _navigatorKey,
+                  onGenerateRoute: (settings) {
+                    if (settings.name == '/playlist') {
+                      return MaterialPageRoute(
+                        builder: (_) => const PlaylistScreen(),
+                      );
+                    }
+                    return MaterialPageRoute(
+                      builder: (_) => const HomeScreen(),
+                    );
+                  },
+                ),
+                if (state.isVisible) const PlayerPanel(),
+              ],
+            ),
+          ),
+        );
       },
-      child: Scaffold(
-        body: Stack(
-          children: [
-            Navigator(
-              key: _navigatorKey,
-              onGenerateRoute: (settings) {
-                if (settings.name == '/playlist') {
-                  return MaterialPageRoute(
-                    builder: (_) => const PlaylistScreen(),
-                  );
-                }
-                return MaterialPageRoute(builder: (_) => const HomeScreen());
-              },
-            ),
-            BlocBuilder<PlayerBloc, PlayerState>(
-              builder: (context, state) {
-                if (!state.isVisible) return const SizedBox.shrink();
-                return PlayerPanel(); // your mini-player
-              },
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

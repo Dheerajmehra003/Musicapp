@@ -25,32 +25,17 @@ class _PlayerPanelState extends State<PlayerPanel> {
     });
   }
 
-  Future<bool> _onWillPop() async {
-    if (panelController.isPanelOpen) {
-      // Step 1: Collapse the panel if open
-      panelController.close();
-      return false; // Do not navigate away
-    } else {
-      // Step 2: Panel is collapsed -> navigate to home screen
-      Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
-      return false; // Prevent default back behavior
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: _onWillPop,
-      child: SlidingUpPanel(
-        controller: panelController,
-        minHeight: 70,
-        maxHeight: MediaQuery.of(context).size.height,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        panelBuilder: (scrollController) {
-          return PlayerScreen(scrollController: scrollController);
-        },
-        collapsed: const MiniPlayer(),
-      ),
+    return SlidingUpPanel(
+      controller: panelController,
+      minHeight: 70,
+      maxHeight: MediaQuery.of(context).size.height,
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      panelBuilder: (scrollController) {
+        return PlayerScreen(scrollController: scrollController);
+      },
+      collapsed: const MiniPlayer(),
     );
   }
 }
