@@ -7,7 +7,8 @@ class PlayerState extends Equatable {
   final String? title;
   final String? artist;
   final String? image;
-  final PanelController? panelController; // NEW
+  final PanelController? panelController;
+  final String? audioUrl; // NEW
 
   const PlayerState({
     this.isVisible = false,
@@ -16,6 +17,7 @@ class PlayerState extends Equatable {
     this.artist,
     this.image,
     this.panelController,
+    this.audioUrl,
   });
 
   PlayerState copyWith({
@@ -25,6 +27,7 @@ class PlayerState extends Equatable {
     String? artist,
     String? image,
     PanelController? panelController,
+    String? audioUrl,
   }) {
     return PlayerState(
       isVisible: isVisible ?? this.isVisible,
@@ -33,6 +36,7 @@ class PlayerState extends Equatable {
       artist: artist ?? this.artist,
       image: image ?? this.image,
       panelController: panelController ?? this.panelController,
+      audioUrl: audioUrl ?? this.audioUrl,
     );
   }
 
@@ -44,5 +48,6 @@ class PlayerState extends Equatable {
     artist,
     image,
     panelController,
+    audioUrl,
   ];
 }

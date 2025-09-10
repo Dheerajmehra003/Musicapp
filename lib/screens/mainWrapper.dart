@@ -41,8 +41,12 @@ class MainWrapper extends StatelessWidget {
                   key: _navigatorKey,
                   onGenerateRoute: (settings) {
                     if (settings.name == '/playlist') {
+                      final args = settings.arguments as Map<String, dynamic>?;
                       return MaterialPageRoute(
-                        builder: (_) => const PlaylistScreen(),
+                        builder: (_) => PlaylistScreen(
+                          playlistId: args?['playlistId'] ?? '',
+                          playlistName: args?['playlistName'] ?? 'Unknown',
+                        ),
                       );
                     }
                     return MaterialPageRoute(

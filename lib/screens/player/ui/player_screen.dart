@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:musicapp/constants/image_path.dart';
+import 'package:just_audio/just_audio.dart' hide PlayerState;
 import 'package:musicapp/widgets/text_widget.dart';
 import 'package:sliding_up_panel/sliding_up_panel.dart';
 
 import '../../../bloc/playerbloc/player_bloc.dart';
 import '../../../bloc/playerbloc/player_event.dart';
+import '../../../bloc/playerbloc/player_state.dart';
 
 class PlayerPanel extends StatefulWidget {
   const PlayerPanel({super.key});
@@ -16,6 +17,7 @@ class PlayerPanel extends StatefulWidget {
 
 class _PlayerPanelState extends State<PlayerPanel> {
   final PanelController panelController = PanelController();
+  final AudioPlayer audioPlayer = AudioPlayer(); // Audio player instance
 
   @override
   void initState() {
@@ -26,16 +28,45 @@ class _PlayerPanelState extends State<PlayerPanel> {
   }
 
   @override
+  void dispose() {
+    audioPlayer.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return SlidingUpPanel(
-      controller: panelController,
-      minHeight: 70,
-      maxHeight: MediaQuery.of(context).size.height,
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-      panelBuilder: (scrollController) {
-        return PlayerScreen(scrollController: scrollController);
+    return BlocListener<PlayerBloc, PlayerState>(
+      listener: (context, state) async {
+        // Play or pause audio based on state
+        try {
+          await audioPlayer.setUrl(state.audioUrl!);
+          if (state.isPlaying) {
+            audioPlayer.play();
+          } else {
+            audioPlayer.pause();
+          }
+        } catch (e) {
+          print("Audio playback error: $e");
+        }
       },
-      collapsed: const MiniPlayer(),
+      child: BlocBuilder<PlayerBloc, PlayerState>(
+        builder: (context, state) {
+          return SlidingUpPanel(
+            controller: panelController,
+            minHeight: 70,
+            maxHeight: MediaQuery.of(context).size.height,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            panelBuilder: (scrollController) {
+              return PlayerScreen(
+                scrollController: scrollController,
+                state: state,
+                audioPlayer: audioPlayer,
+              );
+            },
+            collapsed: MiniPlayer(state: state, audioPlayer: audioPlayer),
+          );
+        },
+      ),
     );
   }
 }
@@ -43,7 +74,15 @@ class _PlayerPanelState extends State<PlayerPanel> {
 /// Full Player
 class PlayerScreen extends StatelessWidget {
   final ScrollController scrollController;
-  const PlayerScreen({super.key, required this.scrollController});
+  final PlayerState state;
+  final AudioPlayer audioPlayer;
+
+  const PlayerScreen({
+    super.key,
+    required this.scrollController,
+    required this.state,
+    required this.audioPlayer,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -53,8 +92,8 @@ class PlayerScreen extends StatelessWidget {
         height: MediaQuery.of(context).size.height,
         decoration: BoxDecoration(
           image: DecorationImage(
-            image: AssetImage(americangirl),
-            fit: BoxFit.fill,
+            image: NetworkImage(state.image!),
+            fit: BoxFit.cover,
           ),
         ),
         child: Container(
@@ -80,91 +119,132 @@ class PlayerScreen extends StatelessWidget {
                         },
                       ),
                     ),
-                    Center(
-                      child: TextWidget(
-                        title: 'RAP 91 Hindi',
-                        color: Colors.white,
-                        weight: FontWeight.w600,
+                    Expanded(
+                      child: Center(
+                        child: TextWidget(
+                          title: state.title!,
+                          color: Colors.white,
+                          weight: FontWeight.w600,
+                        ),
                       ),
                     ),
                     const Icon(Icons.more_horiz, color: Colors.white),
                   ],
                 ),
               ),
-              const SizedBox(height: 390),
+              const SizedBox(height: 40),
+
+              /// Album Art and Song Info
               Padding(
-                padding: const EdgeInsets.only(left: 20, right: 20),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Row(
                   children: [
                     Container(
                       height: 50,
                       width: 50,
                       decoration: BoxDecoration(
-                        image: DecorationImage(image: AssetImage(americangirl)),
+                        image: DecorationImage(
+                          image: NetworkImage(state.image!),
+
+                          fit: BoxFit.cover,
+                        ),
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
+                    const SizedBox(width: 10),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         TextWidget(
-                          title: "Seedha Maut",
+                          title: state.title!,
                           size: 22,
                           weight: FontWeight.bold,
                           color: Colors.white,
                         ),
                         TextWidget(
-                          title: "Krishna",
+                          title: state.artist!,
                           size: 16,
                           color: Colors.grey,
                         ),
                       ],
                     ),
                     const Spacer(),
-                    const Icon(
-                      Icons.add_circle_outline_outlined,
-                      color: Colors.white,
-                      size: 40,
+                    IconButton(
+                      icon: Icon(
+                        Icons.add_circle_outline_outlined,
+                        color: Colors.white,
+                        size: 40,
+                      ),
+                      onPressed: () {},
                     ),
                   ],
                 ),
               ),
-              Column(
-                children: [
-                  Slider(
-                    activeColor: Colors.white,
-                    inactiveColor: Colors.grey.shade700,
-                    value: 60,
-                    min: 0,
-                    max: 180,
-                    onChanged: (value) {},
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: const [
-                        Text(
-                          "1:00",
-                          style: TextStyle(color: Colors.white, fontSize: 12),
+              const SizedBox(height: 20),
+
+              /// Slider
+              StreamBuilder<Duration>(
+                stream: audioPlayer.positionStream,
+                builder: (context, snapshot) {
+                  final position = snapshot.data ?? Duration.zero;
+                  final total = audioPlayer.duration ?? Duration(seconds: 180);
+                  return Column(
+                    children: [
+                      Slider(
+                        activeColor: Colors.white,
+                        inactiveColor: Colors.grey.shade700,
+                        value: position.inSeconds.toDouble().clamp(
+                          0,
+                          total.inSeconds.toDouble(),
                         ),
-                        Text(
-                          "3:00",
-                          style: TextStyle(color: Colors.white, fontSize: 12),
+                        min: 0,
+                        max: total.inSeconds.toDouble(),
+                        onChanged: (value) {
+                          audioPlayer.seek(Duration(seconds: value.toInt()));
+                        },
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              "${position.inMinutes}:${(position.inSeconds % 60).toString().padLeft(2, '0')}",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                              ),
+                            ),
+                            Text(
+                              "${total.inMinutes}:${(total.inSeconds % 60).toString().padLeft(2, '0')}",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  ),
-                ],
+                      ),
+                    ],
+                  );
+                },
               ),
+
+              /// Playback Controls
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  const Icon(Icons.shuffle, color: Colors.grey, size: 26),
-                  const Icon(
-                    Icons.skip_previous,
-                    color: Colors.white,
-                    size: 40,
+                  IconButton(
+                    icon: Icon(Icons.shuffle, color: Colors.grey, size: 26),
+                    onPressed: () {},
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      Icons.skip_previous,
+                      color: Colors.white,
+                      size: 40,
+                    ),
+                    onPressed: () {},
                   ),
                   Container(
                     height: 70,
@@ -173,14 +253,29 @@ class PlayerScreen extends StatelessWidget {
                       color: Colors.green,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
-                      Icons.play_arrow,
-                      size: 45,
-                      color: Colors.black,
+                    child: IconButton(
+                      icon: Icon(
+                        state.isPlaying ? Icons.pause : Icons.play_arrow,
+                        size: 45,
+                        color: Colors.black,
+                      ),
+                      onPressed: () {
+                        if (state.isPlaying) {
+                          context.read<PlayerBloc>().add(PauseSong());
+                        } else {
+                          context.read<PlayerBloc>().add(ResumeSong());
+                        }
+                      },
                     ),
                   ),
-                  const Icon(Icons.skip_next, color: Colors.white, size: 40),
-                  const Icon(Icons.repeat, color: Colors.grey, size: 26),
+                  IconButton(
+                    icon: Icon(Icons.skip_next, color: Colors.white, size: 40),
+                    onPressed: () {},
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.repeat, color: Colors.grey, size: 26),
+                    onPressed: () {},
+                  ),
                 ],
               ),
               const Spacer(),
@@ -193,37 +288,95 @@ class PlayerScreen extends StatelessWidget {
   }
 }
 
-/// Mini Player (collapsed version)
+/// Mini Player
 class MiniPlayer extends StatelessWidget {
-  const MiniPlayer({super.key});
+  final PlayerState state;
+  final AudioPlayer audioPlayer;
+
+  const MiniPlayer({super.key, required this.state, required this.audioPlayer});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       height: 70,
-      color: Colors.black87,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.green,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Row(
         children: [
-          Container(
-            height: 50,
-            width: 50,
-            decoration: BoxDecoration(
-              image: DecorationImage(image: AssetImage(americangirl)),
-              borderRadius: BorderRadius.circular(10),
+          /// Album Art
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.network(
+              state.image ?? '',
+              height: 50,
+              width: 50,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => Container(
+                height: 50,
+                width: 50,
+                color: Colors.grey[800],
+                child: const Icon(Icons.music_note, color: Colors.white70),
+              ),
             ),
           ),
-          const SizedBox(width: 10),
-          const Expanded(
-            child: Text(
-              "Seedha Maut - Krishna",
-              style: TextStyle(color: Colors.white, fontSize: 16),
+          const SizedBox(width: 12),
+
+          /// Song Info
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  state.title ?? "Unknown Title",
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  state.artist ?? "Unknown Artist",
+                  style: TextStyle(color: Colors.grey[400], fontSize: 14),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
           ),
-          const Icon(Icons.play_arrow, color: Colors.white, size: 30),
-          const SizedBox(width: 10),
+
+          /// Play/Pause Button
           IconButton(
-            icon: Icon(Icons.close, color: Colors.white, size: 30),
+            icon: Icon(
+              state.isPlaying
+                  ? Icons.pause_circle_filled
+                  : Icons.play_circle_fill,
+              color: Colors.greenAccent,
+              size: 40,
+            ),
+            onPressed: () {
+              if (state.isPlaying) {
+                context.read<PlayerBloc>().add(PauseSong());
+              } else {
+                context.read<PlayerBloc>().add(ResumeSong());
+              }
+            },
+          ),
+
+          /// Close Button
+          IconButton(
+            icon: const Icon(Icons.close, color: Colors.white70, size: 26),
             onPressed: () {
               context.read<PlayerBloc>().add(HidePlayer());
             },

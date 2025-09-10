@@ -10,11 +10,14 @@ class PlaySong extends PlayerEvent {
   final String title;
   final String artist;
   final String image;
+  final String audioUrl; // new
 
-  PlaySong({required this.title, required this.artist, required this.image});
-
-  @override
-  List<Object?> get props => [title, artist, image];
+  PlaySong({
+    required this.title,
+    required this.artist,
+    required this.image,
+    required this.audioUrl,
+  });
 }
 
 class HidePlayer extends PlayerEvent {}

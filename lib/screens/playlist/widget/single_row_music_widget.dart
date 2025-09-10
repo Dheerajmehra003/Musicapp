@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../bloc/playerbloc/player_bloc.dart';
 import '../../../bloc/playerbloc/player_event.dart';
-import '../../../constants/image_path.dart';
 
 class SongRow extends StatelessWidget {
   final int index;
@@ -11,6 +10,7 @@ class SongRow extends StatelessWidget {
   final String title;
   final String artist;
   final String duration;
+  final String audioUrl;
 
   const SongRow({
     super.key,
@@ -19,6 +19,7 @@ class SongRow extends StatelessWidget {
     required this.title,
     required this.artist,
     required this.duration,
+    required this.audioUrl,
   });
 
   @override
@@ -29,11 +30,13 @@ class SongRow extends StatelessWidget {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () {
+          // Use actual song info here
           context.read<PlayerBloc>().add(
             PlaySong(
-              title: "Seedha Maut",
-              artist: "Krishna",
-              image: americangirl,
+              title: title,
+              artist: artist,
+              image: image,
+              audioUrl: audioUrl,
             ),
           );
         },
@@ -46,7 +49,9 @@ class SongRow extends StatelessWidget {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(5),
                 image: DecorationImage(
-                  image: AssetImage(image),
+                  image: image.startsWith('http')
+                      ? NetworkImage(image) as ImageProvider
+                      : AssetImage(image),
                   fit: BoxFit.cover,
                 ),
               ),

@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:musicapp/constants/image_path.dart';
 import 'package:musicapp/widgets/text_widget.dart';
 
+import '../../../bloc/playlist/playlist_bloc.dart';
+import '../../../bloc/playlist/playlist_event.dart';
+import '../../../bloc/playlist/playlist_state.dart';
+import '../../../repositories/playlistrepo/playlistrepository.dart';
 import '../widget/horizontal_list_widget.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -69,6 +74,7 @@ class HomeScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             spacing: 9,
             children: [
+              // Top Row Cards (unchanged)
               Row(
                 spacing: 10,
                 children: [
@@ -200,83 +206,164 @@ class HomeScreen extends StatelessWidget {
                 ],
               ),
               SizedBox(height: 5),
+
+              // Jump Back In! Playlist (Rap)
               TextWidget(
                 title: 'Jump Back In!',
                 color: Colors.white,
                 weight: FontWeight.w600,
                 size: 20,
               ),
-              HorizontalMusicList(
-                items: [
-                  {
-                    'image': africangirl,
-                    'title': 'Seedha Maut, Krishna, Karan Aujla',
+              BlocProvider(
+                create: (_) =>
+                    PlaylistBloc(JamendoRepository())
+                      ..add(LoadPlaylists(tag: "rap")),
+                child: BlocBuilder<PlaylistBloc, PlaylistState>(
+                  builder: (context, state) {
+                    if (state is PlaylistLoading) {
+                      return SizedBox(
+                        height: 150,
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: Colors.orange,
+                          ),
+                        ),
+                      );
+                    } else if (state is PlaylistLoaded) {
+                      return HorizontalMusicList(
+                        items: state.playlists.map((playlist) {
+                          return {
+                            'image':
+                                playlist['image'] != null &&
+                                    playlist['image'].toString().isNotEmpty
+                                ? playlist['image'].toString()
+                                : africangirl,
+                            'id': playlist['id'],
+                            'title': playlist['name'] ?? 'Unknown Artist',
+                          };
+                        }).toList(),
+                      );
+                    } else if (state is PlaylistError) {
+                      return SizedBox(
+                        height: 150,
+                        child: Center(
+                          child: TextWidget(
+                            title: "Failed to load playlists",
+                            color: Colors.white,
+                          ),
+                        ),
+                      );
+                    } else {
+                      return SizedBox.shrink();
+                    }
                   },
-                  {
-                    'image': africangirl,
-                    'title': 'Seedha Maut, Krishna, Karan Aujla',
-                  },
-                  {
-                    'image': africangirl,
-                    'title': 'Seedha Maut, Krishna, Karan Aujla',
-                  },
-                  {
-                    'image': africangirl,
-                    'title': 'Seedha Maut, Krishna, Karan Aujla',
-                  },
-                ],
+                ),
               ),
+
+              // Made For You Playlist (Desi)
               TextWidget(
                 title: 'Made For You',
                 color: Colors.white,
                 weight: FontWeight.w600,
                 size: 20,
               ),
-              HorizontalMusicList(
-                items: [
-                  {
-                    'image': africangirl,
-                    'title': 'Seedha Maut, Krishna, Karan Aujla',
+              BlocProvider(
+                create: (_) =>
+                    PlaylistBloc(JamendoRepository())
+                      ..add(LoadPlaylists(tag: "desi")),
+                child: BlocBuilder<PlaylistBloc, PlaylistState>(
+                  builder: (context, state) {
+                    if (state is PlaylistLoading) {
+                      return SizedBox(
+                        height: 150,
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: Colors.orange,
+                          ),
+                        ),
+                      );
+                    } else if (state is PlaylistLoaded) {
+                      return HorizontalMusicList(
+                        items: state.playlists.map((playlist) {
+                          return {
+                            'image':
+                                playlist['image'] != null &&
+                                    playlist['image'].toString().isNotEmpty
+                                ? playlist['image'].toString()
+                                : africangirl,
+                            'id': playlist['id'],
+                            'title': playlist['name'] ?? 'Unknown Artist',
+                          };
+                        }).toList(),
+                      );
+                    } else if (state is PlaylistError) {
+                      return SizedBox(
+                        height: 150,
+                        child: Center(
+                          child: TextWidget(
+                            title: "Failed to load playlists",
+                            color: Colors.white,
+                          ),
+                        ),
+                      );
+                    } else {
+                      return SizedBox.shrink();
+                    }
                   },
-                  {
-                    'image': africangirl,
-                    'title': 'Seedha Maut, Krishna, Karan Aujla',
-                  },
-                  {
-                    'image': africangirl,
-                    'title': 'Seedha Maut, Krishna, Karan Aujla',
-                  },
-                  {
-                    'image': africangirl,
-                    'title': 'Seedha Maut, Krishna, Karan Aujla',
-                  },
-                ],
+                ),
               ),
+
+              // Based on recent listening (All)
               TextWidget(
                 title: 'Based on your recent listening',
                 color: Colors.white,
                 weight: FontWeight.w600,
                 size: 20,
               ),
-              HorizontalMusicList(
-                items: [
-                  {
-                    'image': africangirl,
-                    'title': 'Seedha Maut, Krishna, Karan Aujla',
+              BlocProvider(
+                create: (_) =>
+                    PlaylistBloc(JamendoRepository())
+                      ..add(LoadPlaylists()), // all playlists
+                child: BlocBuilder<PlaylistBloc, PlaylistState>(
+                  builder: (context, state) {
+                    if (state is PlaylistLoading) {
+                      return SizedBox(
+                        height: 150,
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: Colors.orange,
+                          ),
+                        ),
+                      );
+                    } else if (state is PlaylistLoaded) {
+                      return HorizontalMusicList(
+                        items: state.playlists.map((playlist) {
+                          return {
+                            'image':
+                                playlist['image'] != null &&
+                                    playlist['image'].toString().isNotEmpty
+                                ? playlist['image'].toString()
+                                : africangirl,
+                            'id': playlist['id'],
+                            'title': playlist['name'] ?? 'Unknown Artist',
+                          };
+                        }).toList(),
+                      );
+                    } else if (state is PlaylistError) {
+                      return SizedBox(
+                        height: 150,
+                        child: Center(
+                          child: TextWidget(
+                            title: "Failed to load playlists",
+                            color: Colors.white,
+                          ),
+                        ),
+                      );
+                    } else {
+                      return SizedBox.shrink();
+                    }
                   },
-                  {
-                    'image': africangirl,
-                    'title': 'Seedha Maut, Krishna, Karan Aujla',
-                  },
-                  {
-                    'image': africangirl,
-                    'title': 'Seedha Maut, Krishna, Karan Aujla',
-                  },
-                  {
-                    'image': africangirl,
-                    'title': 'Seedha Maut, Krishna, Karan Aujla',
-                  },
-                ],
+                ),
               ),
             ],
           ),

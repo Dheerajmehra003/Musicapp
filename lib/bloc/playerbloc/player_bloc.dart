@@ -12,6 +12,7 @@ class PlayerBloc extends Bloc<PlayerEvent, PlayerState> {
           title: event.title,
           artist: event.artist,
           image: event.image,
+          audioUrl: event.audioUrl,
         ),
       );
 
